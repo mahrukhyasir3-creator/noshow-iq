@@ -12,3 +12,5 @@ build/
 *.pkl
 data/
 .DS_Store
+*.log
+.env.local
