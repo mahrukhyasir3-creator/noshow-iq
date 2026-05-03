@@ -18,6 +18,7 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY noshow_iq/ ./noshow_iq/
+COPY noshow_model.joblib ./noshow_model.joblib
 
 RUN chown -R appuser:appuser /app
 USER appuser
