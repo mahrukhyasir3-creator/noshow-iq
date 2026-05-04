@@ -23,5 +23,7 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 7860
+COPY train_model.py ./train_model.py
+RUN python train_model.py || true
 
 CMD ["python", "-m", "noshow_iq.api"]
