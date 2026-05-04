@@ -14,3 +14,4 @@ data/
 *.log
 .env.local
 .env
+noshow_model.joblib
