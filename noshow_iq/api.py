@@ -1,7 +1,6 @@
-from flask import Flask, request, jsonify, render_template
 import os
 from datetime import datetime, timezone
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from pymongo import MongoClient
 from dotenv import load_dotenv
 from noshow_iq.preprocess import clean_single_record
@@ -9,13 +8,26 @@ from noshow_iq.model import predict
 
 load_dotenv()
 
+# Train model if not exists
+MODEL_PATH = "/app/noshow_model.joblib"
+if not os.path.exists(MODEL_PATH):
+    MODEL_PATH = "noshow_model.joblib"
+
+os.environ["MODEL_PATH"] = MODEL_PATH
+
 app = Flask(__name__)
 
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/noshow")
-client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
-db = client.get_database("noshow")
-predictions_col = db["predictions"]
-training_runs_col = db["training_runs"]
+try:
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+    db = client.get_database("noshow")
+    predictions_col = db["predictions"]
+    training_runs_col = db["training_runs"]
+except Exception:
+    predictions_col = None
+    training_runs_col = None
+
+
 @app.route("/", methods=["GET"])
 def home():
     return render_template("index.html")
@@ -46,7 +58,8 @@ def predict_endpoint():
         "recommendation": result["recommendation"],
     }
     try:
-        predictions_col.insert_one(doc)
+        if predictions_col is not None:
+            predictions_col.insert_one(doc)
     except Exception:
         pass
 
@@ -100,7 +113,6 @@ def stats():
         avg_data = result[0]["avg_prob"]
         avg_prob = avg_data[0]["avg"] if avg_data else 0.0
         total = avg_data[0]["total"] if avg_data else 0
-
         last_run = training_runs_col.find_one(
             {}, {"_id": 0, "timestamp": 1},
             sort=[("timestamp", -1)]
