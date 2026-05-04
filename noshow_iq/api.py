@@ -122,21 +122,32 @@ def stats():
             {
                 "$facet": {
                     "counts": [
-                        {"$group": {"_id": "$risk_level", "count": {"$sum": 1}}}
+                        {"$group": {
+                            "_id": "$risk_level",
+                            "count": {"$sum": 1}
+                        }}
                     ],
                     "avg_prob": [
-                        {"$group": {"_id": None, "avg": {"$avg": "$no_show_probability"}, "total": {"$sum": 1}}}
+                        {"$group": {
+                            "_id": None,
+                            "avg": {"$avg": "$no_show_probability"},
+                            "total": {"$sum": 1}
+                        }}
                     ],
                 }
             }
         ]
         result = list(predictions_col.aggregate(pipeline))
-        counts = {item["_id"]: item["count"] for item in result[0]["counts"]}
+        counts = {
+            item["_id"]: item["count"]
+            for item in result[0]["counts"]
+        }
         avg_data = result[0]["avg_prob"]
         avg_prob = avg_data[0]["avg"] if avg_data else 0.0
         total = avg_data[0]["total"] if avg_data else 0
         last_run = training_runs_col.find_one(
-            {}, {"_id": 0, "timestamp": 1}, sort=[("timestamp", -1)]
+            {}, {"_id": 0, "timestamp": 1},
+            sort=[("timestamp", -1)]
         )
     except Exception:
         counts = {}
