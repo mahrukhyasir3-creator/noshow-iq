@@ -2,161 +2,138 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NoShowIQ - Patient Risk Predictor</title>
+    <title>NoShowIQ</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
             min-height: 100vh;
-            padding: 30px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
-        .container {
-            max-width: 650px;
-            margin: 0 auto;
+        .card {
             background: white;
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 600px;
             overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
         }
         .header {
-            background: linear-gradient(135deg, #2c3e50, #3498db);
+            background: linear-gradient(135deg, #0f3460, #e94560);
             color: white;
-            padding: 30px;
+            padding: 25px;
             text-align: center;
         }
-        .header h1 { font-size: 2.5em; margin-bottom: 5px; }
-        .header p { opacity: 0.8; font-size: 1.1em; }
-        .form-container { padding: 30px; }
-        .form-grid {
+        .header h1 { font-size: 2em; }
+        .header p { opacity: 0.85; margin-top: 5px; }
+        .body { padding: 25px; }
+        .grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 12px;
             margin-bottom: 20px;
         }
-        .form-group {
-            background: #f8f9fa;
-            padding: 15px;
+        .field {
+            background: #f0f4ff;
             border-radius: 10px;
-            border-left: 4px solid #3498db;
+            padding: 12px;
+            border-left: 4px solid #0f3460;
         }
-        .form-group label {
-            display: block;
+        .field label {
+            font-size: 0.8em;
             font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 8px;
-            font-size: 0.9em;
+            color: #0f3460;
+            display: block;
+            margin-bottom: 6px;
         }
-        .form-group input {
+        .field input {
             width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
             font-size: 1em;
-            transition: border-color 0.3s;
-        }
-        .form-group input:focus {
-            outline: none;
-            border-color: #3498db;
         }
         .btn {
             width: 100%;
             padding: 15px;
-            background: linear-gradient(135deg, #3498db, #2980b9);
+            background: linear-gradient(135deg, #0f3460, #e94560);
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 1.2em;
+            font-size: 1.1em;
             font-weight: bold;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-top: 10px;
+            transition: opacity 0.2s;
         }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(52,152,219,0.4);
-        }
-        .btn:active { transform: translateY(0); }
+        .btn:hover { opacity: 0.9; }
         .result {
-            margin: 20px 30px 30px;
-            padding: 25px;
-            border-radius: 15px;
-            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
             text-align: center;
-            animation: fadeIn 0.5s ease;
+            display: none;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .result.high {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-            color: white;
-        }
-        .result.medium {
-            background: linear-gradient(135deg, #ffd32a, #f79f1f);
-            color: #2c3e50;
-        }
-        .result.low {
-            background: linear-gradient(135deg, #0be881, #05c46b);
-            color: #2c3e50;
-        }
-        .result h2 {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-        .result .prob {
-            font-size: 1.3em;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-        .result .rec {
-            font-size: 1em;
+        .result.high { background: #ff4757; color: white; }
+        .result.medium { background: #ffa502; color: white; }
+        .result.low { background: #2ed573; color: #1a1a1a; }
+        .result h2 { font-size: 1.8em; margin-bottom: 8px; }
+        .result .bar-wrap {
             background: rgba(255,255,255,0.3);
-            padding: 10px 15px;
-            border-radius: 8px;
+            border-radius: 20px;
+            height: 20px;
+            margin: 10px 0;
+            overflow: hidden;
         }
-        .loading {
-            text-align: center;
-            color: #3498db;
-            font-size: 1.1em;
-            display: none;
+        .result .bar {
+            height: 100%;
+            background: white;
+            border-radius: 20px;
+            transition: width 1s ease;
+        }
+        .result .prob { font-size: 1.1em; font-weight: bold; }
+        .result .rec {
+            margin-top: 10px;
+            background: rgba(255,255,255,0.25);
             padding: 10px;
+            border-radius: 8px;
+            font-size: 0.95em;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="card">
         <div class="header">
             <h1>🏥 NoShowIQ</h1>
             <p>Patient No-Show Risk Predictor</p>
         </div>
-
-        <div class="form-container">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>🎂 Patient Age</label>
-                    <input type="number" id="age" value="35" min="0" max="120">
+        <div class="body">
+            <div class="grid">
+                <div class="field">
+                    <label>🎂 Age (0-120)</label>
+                    <input type="number" id="age" value="30" min="0" max="120">
                 </div>
-                <div class="form-group">
+                <div class="field">
                     <label>📅 Days in Advance</label>
                     <input type="number" id="days" value="7" min="0">
                 </div>
-                <div class="form-group">
-                    <label>📱 SMS Received?</label>
+                <div class="field">
+                    <label>📱 SMS Received (0/1)</label>
                     <input type="number" id="sms" value="1" min="0" max="1">
                 </div>
-                <div class="form-group">
-                    <label>❤️ Hypertension?</label>
+                <div class="field">
+                    <label>❤️ Hypertension (0/1)</label>
                     <input type="number" id="hypertension" value="0" min="0" max="1">
                 </div>
-                <div class="form-group">
-                    <label>🎓 Scholarship?</label>
+                <div class="field">
+                    <label>🎓 Scholarship (0/1)</label>
                     <input type="number" id="scholarship" value="0" min="0" max="1">
                 </div>
-                <div class="form-group">
-                    <label>🩺 Diabetes?</label>
+                <div class="field">
+                    <label>🩺 Diabetes (0/1)</label>
                     <input type="number" id="diabetes" value="0" min="0" max="1">
                 </div>
             </div>
@@ -165,24 +142,22 @@
                 🔍 Predict No-Show Risk
             </button>
 
-            <div class="loading" id="loading">
-                ⏳ Analyzing patient data...
+            <div class="result" id="result">
+                <h2 id="risk-text"></h2>
+                <div class="bar-wrap">
+                    <div class="bar" id="bar"></div>
+                </div>
+                <div class="prob" id="prob-text"></div>
+                <div class="rec" id="rec-text"></div>
             </div>
-        </div>
-
-        <div class="result" id="result">
-            <h2 id="risk-text"></h2>
-            <div class="prob" id="prob-text"></div>
-            <div class="rec" id="rec-text"></div>
         </div>
     </div>
 
     <script>
         async function predict() {
-            const loading = document.getElementById('loading');
-            const result = document.getElementById('result');
-            result.style.display = 'none';
-            loading.style.display = 'block';
+            const btn = document.querySelector('.btn');
+            btn.innerText = '⏳ Analyzing...';
+            btn.disabled = true;
 
             const data = {
                 age: parseInt(document.getElementById('age').value) || 30,
@@ -191,6 +166,9 @@
                 hypertension: parseInt(document.getElementById('hypertension').value) || 0,
                 scholarship: parseInt(document.getElementById('scholarship').value) || 0,
                 diabetes: parseInt(document.getElementById('diabetes').value) || 0,
+                appointment_weekday: 2,
+                alcoholism: 0,
+                handicap: 0,
             };
 
             try {
@@ -199,25 +177,28 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)
                 });
-                const res = await resp.json();
-                loading.style.display = 'none';
 
-                const riskLevel = res.risk_level || 'low';
+                const res = await resp.json();
+                const risk = res.risk_level || 'low';
                 const prob = res.no_show_probability || 0;
                 const rec = res.recommendation || '';
 
-                result.className = 'result ' + riskLevel;
-                result.style.display = 'block';
+                const div = document.getElementById('result');
+                div.className = 'result ' + risk;
+                div.style.display = 'block';
 
-                const emoji = riskLevel === 'high' ? '🚨' : riskLevel === 'medium' ? '⚠️' : '✅';
-                document.getElementById('risk-text').innerText = emoji + ' ' + riskLevel.toUpperCase() + ' RISK';
+                const emoji = risk === 'high' ? '🚨' : risk === 'medium' ? '⚠️' : '✅';
+                document.getElementById('risk-text').innerText = emoji + ' ' + risk.toUpperCase() + ' RISK';
                 document.getElementById('prob-text').innerText = 'No-Show Probability: ' + (prob * 100).toFixed(1) + '%';
                 document.getElementById('rec-text').innerText = '💡 ' + rec;
+                document.getElementById('bar').style.width = (prob * 100) + '%';
 
             } catch(e) {
-                loading.style.display = 'none';
-                alert('Connection error. Please try again.');
+                alert('Error connecting to server!');
             }
+
+            btn.innerText = '🔍 Predict No-Show Risk';
+            btn.disabled = false;
         }
     </script>
 </body>
