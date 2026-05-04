@@ -49,16 +49,16 @@
         <p id="prob"></p>
         <p id="rec"></p>
     </div>
-
-    <script>
-        async function predict() {
-            const data = {
-                age: parseInt(document.getElementById('age').value),
-                days_in_advance: parseInt(document.getElementById('days').value),
-                sms_received: parseInt(document.getElementById('sms').value),
-                hypertension: parseInt(document.getElementById('hypertension').value),
-                scholarship: parseInt(document.getElementById('scholarship').value),
-            };
+<script>
+    async function predict() {
+        const data = {
+            age: parseInt(document.getElementById('age').value),
+            days_in_advance: parseInt(document.getElementById('days').value),
+            sms_received: parseInt(document.getElementById('sms').value),
+            hypertension: parseInt(document.getElementById('hypertension').value),
+            scholarship: parseInt(document.getElementById('scholarship').value),
+        };
+        try {
             const resp = await fetch('/predict', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -71,7 +71,10 @@
             document.getElementById('risk').innerText = 'Risk: ' + result.risk_level.toUpperCase();
             document.getElementById('prob').innerText = 'Probability: ' + (result.no_show_probability * 100).toFixed(1) + '%';
             document.getElementById('rec').innerText = result.recommendation;
+        } catch(e) {
+            alert('Error: ' + e.message);
         }
-    </script>
+    }
+</script>
 </body>
 </html>
