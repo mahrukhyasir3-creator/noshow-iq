@@ -1,3 +1,4 @@
+from flask import Flask, request, jsonify, render_template
 import os
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify
@@ -15,6 +16,9 @@ client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
 db = client.get_database("noshow")
 predictions_col = db["predictions"]
 training_runs_col = db["training_runs"]
+@app.route("/", methods=["GET"])
+def home():
+    return render_template("index.html")
 
 
 @app.route("/health", methods=["GET"])

@@ -8,9 +8,9 @@ venv/
 dist/
 build/
 .pytest_cache/
-*.joblib
 *.pkl
 data/
 .DS_Store
 *.log
 .env.local
+.env
