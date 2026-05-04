@@ -1,36 +1,30 @@
 import os
+import joblib
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template
 from pymongo import MongoClient
 from dotenv import load_dotenv
 from noshow_iq.preprocess import clean_single_record
-from noshow_iq.model import predict
 
 load_dotenv()
-import joblib
-
-# Try multiple paths for model
-for _path in [
-    "/app/noshow_model.joblib",
-    "noshow_model.joblib",
-    "/home/user/app/noshow_model.joblib",
-]:
-    if os.path.exists(_path):
-        os.environ["MODEL_PATH"] = _path
-        print(f"Model found at: {_path}")
-        break
-else:
-    print("WARNING: Model not found!")
-
-# Train model if not exists
-MODEL_PATH = "/app/noshow_model.joblib"
-if not os.path.exists(MODEL_PATH):
-    MODEL_PATH = "noshow_model.joblib"
-
-os.environ["MODEL_PATH"] = MODEL_PATH
 
 app = Flask(__name__)
 
+# Load model
+MODEL = None
+for _path in [
+    "/app/noshow_model.joblib",
+    "noshow_model.joblib",
+]:
+    if os.path.exists(_path):
+        MODEL = joblib.load(_path)
+        print(f"Model loaded from: {_path}")
+        break
+
+if MODEL is None:
+    print("ERROR: Model not found!")
+
+# MongoDB
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/noshow")
 try:
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
@@ -40,6 +34,32 @@ try:
 except Exception:
     predictions_col = None
     training_runs_col = None
+
+
+def predict_risk(features: dict) -> dict:
+    feature_order = [
+        "age", "days_in_advance", "appointment_weekday",
+        "scholarship", "hypertension", "diabetes",
+        "alcoholism", "handicap", "sms_received",
+    ]
+    row = [[features.get(f, 0) for f in feature_order]]
+    prob = float(MODEL.predict_proba(row)[0][1])
+
+    if prob >= 0.6:
+        risk = "high"
+        rec = "Send reminder SMS + call patient. Consider double-booking."
+    elif prob >= 0.35:
+        risk = "medium"
+        rec = "Send reminder SMS 24 hours before appointment."
+    else:
+        risk = "low"
+        rec = "Standard reminder. Patient likely to attend."
+
+    return {
+        "risk_level": risk,
+        "no_show_probability": round(prob, 4),
+        "recommendation": rec,
+    }
 
 
 @app.route("/", methods=["GET"])
@@ -54,12 +74,14 @@ def health():
 
 @app.route("/predict", methods=["POST"])
 def predict_endpoint():
+    if MODEL is None:
+        return jsonify({"error": "Model not loaded"}), 500
     data = request.get_json(force=True)
     if not data:
-        return jsonify({"error": "No JSON body provided"}), 400
+        return jsonify({"error": "No JSON body"}), 400
     try:
         cleaned = clean_single_record(data)
-        result = predict(cleaned)
+        result = predict_risk(cleaned)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -100,36 +122,21 @@ def stats():
             {
                 "$facet": {
                     "counts": [
-                        {
-                            "$group": {
-                                "_id": "$risk_level",
-                                "count": {"$sum": 1},
-                            }
-                        }
+                        {"$group": {"_id": "$risk_level", "count": {"$sum": 1}}}
                     ],
                     "avg_prob": [
-                        {
-                            "$group": {
-                                "_id": None,
-                                "avg": {"$avg": "$no_show_probability"},
-                                "total": {"$sum": 1},
-                            }
-                        }
+                        {"$group": {"_id": None, "avg": {"$avg": "$no_show_probability"}, "total": {"$sum": 1}}}
                     ],
                 }
             }
         ]
         result = list(predictions_col.aggregate(pipeline))
-        counts = {
-            item["_id"]: item["count"]
-            for item in result[0]["counts"]
-        }
+        counts = {item["_id"]: item["count"] for item in result[0]["counts"]}
         avg_data = result[0]["avg_prob"]
         avg_prob = avg_data[0]["avg"] if avg_data else 0.0
         total = avg_data[0]["total"] if avg_data else 0
         last_run = training_runs_col.find_one(
-            {}, {"_id": 0, "timestamp": 1},
-            sort=[("timestamp", -1)]
+            {}, {"_id": 0, "timestamp": 1}, sort=[("timestamp", -1)]
         )
     except Exception:
         counts = {}
