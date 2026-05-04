@@ -7,6 +7,20 @@ from noshow_iq.preprocess import clean_single_record
 from noshow_iq.model import predict
 
 load_dotenv()
+import joblib
+
+# Try multiple paths for model
+for _path in [
+    "/app/noshow_model.joblib",
+    "noshow_model.joblib",
+    "/home/user/app/noshow_model.joblib",
+]:
+    if os.path.exists(_path):
+        os.environ["MODEL_PATH"] = _path
+        print(f"Model found at: {_path}")
+        break
+else:
+    print("WARNING: Model not found!")
 
 # Train model if not exists
 MODEL_PATH = "/app/noshow_model.joblib"
