@@ -8,6 +8,16 @@ from noshow_iq.preprocess import clean_single_record
 from noshow_iq.model import predict
 
 load_dotenv()
+import urllib.request
+
+MODEL_PATH = "noshow_model.joblib"
+if not os.path.exists(MODEL_PATH):
+    print("Downloading model...")
+    urllib.request.urlretrieve(
+        "https://huggingface.co/spaces/mahrukhAI2025/noshow-iq/resolve/main/noshow_model.joblib",
+        MODEL_PATH
+    )
+    print("Model downloaded!")
 
 app = Flask(__name__)
 
