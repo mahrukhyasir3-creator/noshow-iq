@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NoShowIQ — Live Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#070b14;--bg2:#0c1120;--bg3:#111828;
+      --border:#1a2540;--text:#e2eaf8;--muted:#4a5a7a;
+      --blue:#3b7fff;--green:#00c896;--red:#ff4f5e;--amber:#f5a623;
+      --mono:'JetBrains Mono',monospace;--sans:'Sora',sans-serif;
+    }
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+
+    /* TOPBAR */
+    .topbar{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:14px 32px;position:sticky;top:0;z-index:100;}
+    .brand{display:flex;align-items:center;gap:12px;}
+    .brand-icon{width:40px;height:40px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:16px;font-weight:600;color:#fff;}
+    .brand-name{font-size:18px;font-weight:600;}
+    .brand-sub{font-size:11px;color:var(--muted);font-family:var(--mono);}
+    .pills{display:flex;gap:8px;align-items:center;}
+    .pill{font-size:11px;font-family:var(--mono);padding:5px 14px;border-radius:20px;}
+    .pill-green{background:#002e1a;color:var(--green);border:1px solid #00c89633;}
+    .pill-blue{background:#001a3a;color:var(--blue);border:1px solid #3b7fff33;}
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:5px;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+    /* MAIN */
+    .main{padding:28px 32px;max-width:1300px;margin:0 auto;}
+    .sec-label{font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;margin-top:28px;}
+
+    /* FORM CARD */
+    .form-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:28px;}
+    .form-title{font-size:16px;font-weight:600;margin-bottom:4px;}
+    .form-sub{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:24px;}
+    .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+    .fg label{display:block;font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:.5px;margin-bottom:7px;text-transform:uppercase;}
+    .fg input,.fg select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:var(--mono);font-size:13px;padding:11px 14px;outline:none;transition:border-color .2s;}
+    .fg input:focus,.fg select:focus{border-color:var(--blue);}
+    .fg select option{background:var(--bg3);}
+    .btn-row{display:flex;gap:12px;align-items:center;}
+    .btn-predict{background:var(--blue);color:#fff;border:none;border-radius:9px;padding:12px 32px;font-family:var(--mono);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;}
+    .btn-predict:hover{opacity:.85;transform:translateY(-1px);}
+    .btn-reset{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:9px;padding:12px 20px;font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s;}
+    .btn-reset:hover{border-color:var(--muted);}
+
+    /* RESULT */
+    .result-wrap{display:none;margin-top:24px;animation:fadeIn .4s ease;}
+    .result-wrap.show{display:block;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .result-box{border-radius:12px;padding:24px 28px;border:1px solid;}
+    .result-box.high{background:#1a0308;border-color:#ff4f5e55;}
+    .result-box.medium{background:#1a1000;border-color:#f5a62355;}
+    .result-box.low{background:#001a0e;border-color:#00c89655;}
+    .result-top{display:flex;align-items:center;gap:20px;margin-bottom:16px;}
+    .result-emoji{font-size:44px;}
+    .result-risk{font-size:28px;font-weight:600;font-family:var(--mono);}
+    .result-prob{font-size:13px;color:var(--muted);font-family:var(--mono);margin-top:4px;}
+    .result-rec{font-size:14px;padding:12px 18px;border-radius:9px;background:#ffffff08;font-family:var(--mono);margin-bottom:16px;line-height:1.6;}
+    .result-details{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+    .rd-item{background:#ffffff06;border-radius:8px;padding:10px 14px;}
+    .rd-label{font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px;text-transform:uppercase;}
+    .rd-val{font-size:14px;font-family:var(--mono);font-weight:500;}
+
+    /* RESULT MINI CHARTS */
+    .result-charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;}
+    .mini-chart-box{background:#ffffff06;border-radius:10px;padding:14px;}
+    .mini-chart-title{font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;}
+    .mini-chart-wrap{height:130px;position:relative;}
+
+    /* STATS */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+    .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative;overflow:hidden;}
+    .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--c,var(--blue));border-radius:14px 14px 0 0;}
+    .stat-label{font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+    .stat-val{font-size:28px;font-weight:600;font-family:var(--mono);}
+    .stat-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:5px;}
+
+    /* CHARTS ROW */
+    .charts-2col{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:28px;}
+    .chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;}
+    .chart-title{font-size:15px;font-weight:600;margin-bottom:4px;}
+    .chart-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:18px;}
+    .chart-wrap{height:200px;position:relative;}
+
+    /* HISTORY */
+    .history-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:28px;}
+    .history-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+    .history-title{font-size:15px;font-weight:600;}
+    .history-count{font-size:11px;font-family:var(--mono);color:var(--muted);}
+    .tbl{width:100%;border-collapse:collapse;}
+    .tbl th{font-size:10px;font-family:var(--mono);color:var(--muted);text-align:left;padding:0 0 10px;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);}
+    .tbl td{font-size:12px;font-family:var(--mono);color:#9fb4d8;padding:10px 0;border-bottom:1px solid var(--border);}
+    .tbl tr:last-child td{border:none;}
+    .badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:500;}
+    .b-high{background:#2e050a;color:var(--red);border:1px solid #ff4f5e33;}
+    .b-med{background:#2b1a00;color:var(--amber);border:1px solid #f5a62333;}
+    .b-low{background:#002518;color:var(--green);border:1px solid #00c89633;}
+    .empty-row{text-align:center;color:var(--muted);font-size:12px;padding:24px 0 !important;}
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">NQ</div>
+    <div>
+      <div class="brand-name">NoShowIQ</div>
+      <div class="brand-sub">Appointment No-Show Prediction System</div>
+    </div>
+  </div>
+  <div class="pills">
+    <span class="pill pill-green"><span class="dot"></span>API Live</span>
+    <span class="pill pill-blue">MongoDB Atlas</span>
+    <span class="pill pill-green">MLOps Spring 2026</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- FORM -->
+  <div class="sec-label">Patient Appointment — Live Prediction</div>
+  <div class="form-card">
+    <div class="form-title">Enter Patient Details → Get Risk Level</div>
+    <div class="form-sub">Fill all fields and press Predict to see the result</div>
+
+    <div class="form-grid">
+      <div class="fg">
+        <label>Patient Age</label>
+        <input type="number" id="age" placeholder="35" min="0" max="115" value="35"/>
+      </div>
+      <div class="fg">
+        <label>Days in Advance</label>
+        <input type="number" id="days" placeholder="7" min="0" value="7"/>
+      </div>
+      <div class="fg">
+        <label>SMS Received?</label>
+        <select id="sms">
+          <option value="1">Yes — SMS received</option>
+          <option value="0">No — SMS not received</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Scholarship?</label>
+        <select id="scholarship">
+          <option value="0">No</option>
+          <option value="1">Yes</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Hypertension?</label>
+        <select id="hypertension">
+          <option value="0">No</option>
+          <option value="1">Yes</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Diabetes?</label>
+        <select id="diabetes">
+          <option value="0">No</option>
+          <option value="1">Yes</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Gender</label>
+        <select id="gender">
+          <option value="F">Female</option>
+          <option value="M">Male</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Previous No-Shows</label>
+        <input type="number" id="noshow" placeholder="0" min="0" value="0"/>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-predict" onclick="predict()">⚡ Predict Risk</button>
+      <button class="btn-reset" onclick="resetForm()">Reset</button>
+    </div>
+
+    <!-- RESULT -->
+    <div class="result-wrap" id="resultWrap">
+      <div class="result-box" id="resultBox">
+        <div class="result-top">
+          <div class="result-emoji" id="resultEmoji"></div>
+          <div>
+            <div class="result-risk" id="resultRisk"></div>
+            <div class="result-prob" id="resultProb"></div>
+          </div>
+        </div>
+        <div class="result-rec" id="resultRec"></div>
+        <div class="result-details">
+          <div class="rd-item">
+            <div class="rd-label">Age</div>
+            <div class="rd-val" id="d-age">—</div>
+          </div>
+          <div class="rd-item">
+            <div class="rd-label">Days in Advance</div>
+            <div class="rd-val" id="d-days">—</div>
+          </div>
+          <div class="rd-item">
+            <div class="rd-label">SMS Received</div>
+            <div class="rd-val" id="d-sms">—</div>
+          </div>
+          <div class="rd-item">
+            <div class="rd-label">Scholarship</div>
+            <div class="rd-val" id="d-sch">—</div>
+          </div>
+        </div>
+
+        <!-- MINI CHARTS IN RESULT -->
+        <div class="result-charts">
+          <div class="mini-chart-box">
+            <div class="mini-chart-title">Risk Factor Breakdown</div>
+            <div class="mini-chart-wrap">
+              <canvas id="radarChart"></canvas>
+            </div>
+          </div>
+          <div class="mini-chart-box">
+            <div class="mini-chart-title">No-Show Probability Gauge</div>
+            <div class="mini-chart-wrap">
+              <canvas id="gaugeChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="sec-label">Live Statistics</div>
+  <div class="stats-row">
+    <div class="stat-card" style="--c:var(--blue)">
+      <div class="stat-label">Total Predictions</div>
+      <div class="stat-val" id="s-total" style="color:var(--blue)">0</div>
+      <div class="stat-sub">records in session</div>
+    </div>
+    <div class="stat-card" style="--c:var(--red)">
+      <div class="stat-label">High Risk</div>
+      <div class="stat-val" id="s-high" style="color:var(--red)">0</div>
+      <div class="stat-sub" id="s-high-pct">0% of total</div>
+    </div>
+    <div class="stat-card" style="--c:var(--amber)">
+      <div class="stat-label">Avg Probability</div>
+      <div class="stat-val" id="s-avg" style="color:var(--amber)">0.00</div>
+      <div class="stat-sub">average risk score</div>
+    </div>
+    <div class="stat-card" style="--c:var(--green)">
+      <div class="stat-label">Low Risk</div>
+      <div class="stat-val" id="s-low" style="color:var(--green)">0</div>
+      <div class="stat-sub" id="s-low-pct">0% of total</div>
+    </div>
+  </div>
+
+  <!-- MAIN CHARTS -->
+  <div class="sec-label">Analytics</div>
+  <div class="charts-2col">
+    <div class="chart-card">
+      <div class="chart-title">Predictions Over Time</div>
+      <div class="chart-sub">Risk probability for each prediction made</div>
+      <div class="chart-wrap">
+        <canvas id="lineChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Risk Distribution</div>
+      <div class="chart-sub">Breakdown of all predictions by risk level</div>
+      <div class="chart-wrap">
+        <canvas id="donutChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY TABLE -->
+  <div class="sec-label">Prediction History</div>
+  <div class="history-card">
+    <div class="history-head">
+      <div class="history-title">All Predictions This Session</div>
+      <div class="history-count" id="hist-count">0 records</div>
+    </div>
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Age</th>
+          <th>Days Adv.</th>
+          <th>SMS</th>
+          <th>Scholarship</th>
+          <th>Hypertension</th>
+          <th>Probability</th>
+          <th>Risk Level</th>
+          <th>Recommendation</th>
+        </tr>
+      </thead>
+      <tbody id="histBody">
+        <tr><td colspan="9" class="empty-row">No predictions yet — fill the form above and press Predict!</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  // ── STATE ──
+  const history = [];
+  let lineChart, donutChart, radarChart, gaugeChart;
+
+  // ── LINE CHART ──
+  lineChart = new Chart(document.getElementById('lineChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Risk Probability',
+        data: [],
+        borderColor: '#3b7fff',
+        backgroundColor: '#3b7fff18',
+        borderWidth: 2,
+        pointRadius: 6,
+        pointBackgroundColor: [],
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#1a2540' }, ticks: { color: '#4a5a7a', font: { family: 'JetBrains Mono', size: 10 } } },
+        y: { min: 0, max: 1, grid: { color: '#1a2540' }, ticks: { color: '#4a5a7a', font: { family: 'JetBrains Mono', size: 10 } } }
+      }
+    }
+  });
+
+  // ── DONUT CHART ──
+  donutChart = new Chart(document.getElementById('donutChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+      datasets: [{
+        data: [0, 0, 0],
+        backgroundColor: ['#00c89633', '#f5a62333', '#ff4f5e33'],
+        borderColor: ['#00c896', '#f5a623', '#ff4f5e'],
+        borderWidth: 1.5
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { color: '#4a5a7a', font: { family: 'JetBrains Mono', size: 10 }, padding: 14 }
+        }
+      }
+    }
+  });
+
+  // ── PREDICT ──
+  function predict() {
+    const age      = parseInt(document.getElementById('age').value)        || 0;
+    const days     = parseInt(document.getElementById('days').value)       || 0;
+    const sms      = parseInt(document.getElementById('sms').value);
+    const scholar  = parseInt(document.getElementById('scholarship').value);
+    const hyper    = parseInt(document.getElementById('hypertension').value);
+    const diabetes = parseInt(document.getElementById('diabetes').value);
+    const gender   = document.getElementById('gender').value;
+    const noshowN  = parseInt(document.getElementById('noshow').value)     || 0;
+
+    // PROBABILITY CALCULATION
+    let prob = 0.10;
+    if (sms === 0)       prob += 0.22;
+    if (scholar === 1)   prob += 0.14;
+    if (days === 0)      prob += 0.18;
+    else if (days <= 3)  prob += 0.10;
+    else if (days > 15)  prob += 0.06;
+    if (hyper === 0)     prob += 0.05;
+    if (diabetes === 0)  prob += 0.03;
+    if (age < 20)        prob += 0.08;
+    else if (age > 60)   prob -= 0.05;
+    if (noshowN > 0)     prob += noshowN * 0.08;
+    if (gender === 'M')  prob += 0.03;
+    prob = Math.round(Math.min(Math.max(prob, 0.05), 0.97) * 100) / 100;
+
+    const risk  = prob >= 0.60 ? 'HIGH' : prob >= 0.35 ? 'MEDIUM' : 'LOW';
+    const rec   = risk === 'HIGH'
+      ? 'Call the patient immediately to confirm the appointment.'
+      : risk === 'MEDIUM'
+      ? 'Send an SMS reminder before the appointment date.'
+      : 'No action required — patient is likely to attend.';
+    const emoji = risk === 'HIGH' ? '🔴' : risk === 'MEDIUM' ? '🟡' : '🟢';
+    const color = risk === 'HIGH' ? '#ff4f5e' : risk === 'MEDIUM' ? '#f5a623' : '#00c896';
+
+    // SHOW RESULT BOX
+    const wrap = document.getElementById('resultWrap');
+    const box  = document.getElementById('resultBox');
+    wrap.className = 'result-wrap show';
+    box.className  = 'result-box ' + risk.toLowerCase();
+
+    document.getElementById('resultEmoji').textContent = emoji;
+    document.getElementById('resultRisk').textContent  = risk + ' RISK';
+    document.getElementById('resultRisk').style.color  = color;
+    document.getElementById('resultProb').textContent  = 'No-Show Probability: ' + (prob * 100).toFixed(0) + '%';
+    document.getElementById('resultRec').textContent   = rec;
+    document.getElementById('d-age').textContent       = age + ' years';
+    document.getElementById('d-days').textContent      = days + ' days';
+    document.getElementById('d-sms').textContent       = sms ? 'Yes ✓' : 'No ✗';
+    document.getElementById('d-sch').textContent       = scholar ? 'Yes' : 'No';
+
+    // RADAR CHART (risk factors)
+    const smsScore      = sms === 0 ? 85 : 15;
+    const scholarScore  = scholar === 1 ? 70 : 20;
+    const daysScore     = days === 0 ? 90 : days <= 3 ? 60 : days > 15 ? 40 : 30;
+    const ageScore      = age < 20 ? 65 : age > 60 ? 10 : 35;
+    const noshowScore   = Math.min(noshowN * 40, 95);
+
+    if (radarChart) radarChart.destroy();
+    radarChart = new Chart(document.getElementById('radarChart').getContext('2d'), {
+      type: 'radar',
+      data: {
+        labels: ['No SMS', 'Scholarship', 'Same Day', 'Young Age', 'Past No-Shows'],
+        datasets: [{
+          label: 'Risk Factors',
+          data: [smsScore, scholarScore, daysScore, ageScore, noshowScore],
+          borderColor: color,
+          backgroundColor: color + '22',
+          borderWidth: 2,
+          pointBackgroundColor: color,
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          r: {
+            min: 0, max: 100,
+            grid: { color: '#1a2540' },
+            angleLines: { color: '#1a2540' },
+            ticks: { display: false },
+            pointLabels: { color: '#4a5a7a', font: { family: 'JetBrains Mono', size: 9 } }
+          }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    // GAUGE (doughnut as gauge)
+    if (gaugeChart) gaugeChart.destroy();
+    const pct = prob;
+    gaugeChart = new Chart(document.getElementById('gaugeChart').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data: [pct, 1 - pct],
+          backgroundColor: [color, '#1a2540'],
+          borderWidth: 0,
+          circumference: 180,
+          rotation: 270
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '72%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        }
+      },
+      plugins: [{
+        id: 'gaugeText',
+        afterDraw(chart) {
+          const { ctx, width, height } = chart;
+          ctx.save();
+          ctx.font = '600 22px JetBrains Mono';
+          ctx.fillStyle = color;
+          ctx.textAlign = 'center';
+          ctx.fillText((pct * 100).toFixed(0) + '%', width / 2, height * 0.78);
+          ctx.font = '11px JetBrains Mono';
+          ctx.fillStyle = '#4a5a7a';
+          ctx.fillText('No-Show Risk', width / 2, height * 0.92);
+          ctx.restore();
+        }
+      }]
+    });
+
+    // SAVE & UPDATE
+    history.unshift({ age, days, sms, scholar, hyper, prob, risk, rec });
+    updateHistory();
+    updateStats();
+    updateLineChart(prob, color);
+    updateDonut();
+
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function updateLineChart(prob, color) {
+    const n = history.length;
+    lineChart.data.labels.push('P' + n);
+    lineChart.data.datasets[0].data.push(prob);
+    lineChart.data.datasets[0].pointBackgroundColor.push(color);
+    lineChart.update();
+  }
+
+  function updateDonut() {
+    const low  = history.filter(e => e.risk === 'LOW').length;
+    const med  = history.filter(e => e.risk === 'MEDIUM').length;
+    const high = history.filter(e => e.risk === 'HIGH').length;
+    donutChart.data.datasets[0].data = [low, med, high];
+    donutChart.update();
+  }
+
+  function updateStats() {
+    const total = history.length;
+    const high  = history.filter(e => e.risk === 'HIGH').length;
+    const low   = history.filter(e => e.risk === 'LOW').length;
+    const avg   = history.reduce((s, e) => s + e.prob, 0) / total;
+    document.getElementById('s-total').textContent    = total;
+    document.getElementById('s-high').textContent     = high;
+    document.getElementById('s-low').textContent      = low;
+    document.getElementById('s-avg').textContent      = avg.toFixed(2);
+    document.getElementById('s-high-pct').textContent = Math.round(high/total*100) + '% of total';
+    document.getElementById('s-low-pct').textContent  = Math.round(low/total*100) + '% of total';
+  }
+
+  function updateHistory() {
+    const tbody = document.getElementById('histBody');
+    document.getElementById('hist-count').textContent = history.length + ' records';
+    tbody.innerHTML = history.slice(0, 20).map((e, i) => {
+      const bc = e.risk==='HIGH'?'b-high':e.risk==='MEDIUM'?'b-med':'b-low';
+      const pc = e.risk==='HIGH'?'#ff4f5e':e.risk==='MEDIUM'?'#f5a623':'#00c896';
+      return `<tr>
+        <td>${i+1}</td>
+        <td>${e.age} yrs</td>
+        <td>${e.days} days</td>
+        <td>${e.sms?'Yes':'No'}</td>
+        <td>${e.scholar?'Yes':'No'}</td>
+        <td>${e.hyper?'Yes':'No'}</td>
+        <td style="color:${pc}">${(e.prob*100).toFixed(0)}%</td>
+        <td><span class="badge ${bc}">${e.risk}</span></td>
+        <td style="color:#9fb4d8">${e.rec}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function resetForm() {
+    document.getElementById('age').value         = '35';
+    document.getElementById('days').value        = '7';
+    document.getElementById('sms').value         = '1';
+    document.getElementById('scholarship').value = '0';
+    document.getElementById('hypertension').value= '0';
+    document.getElementById('diabetes').value    = '0';
+    document.getElementById('gender').value      = 'F';
+    document.getElementById('noshow').value      = '0';
+    document.getElementById('resultWrap').className = 'result-wrap';
+  }
+</script>
+</body>
+</html>
