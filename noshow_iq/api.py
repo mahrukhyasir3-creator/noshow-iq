@@ -9,6 +9,8 @@ from noshow_iq.preprocess import clean_single_record
 load_dotenv()
 
 app = Flask(__name__)
+from flask_cors import CORS
+CORS(app)
 
 # Load model
 MODEL = None
